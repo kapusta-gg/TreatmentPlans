@@ -1,5 +1,5 @@
 import os
-
+import pprint
 
 import pydicom
 import matplotlib.pyplot as plt
@@ -36,12 +36,13 @@ def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, list]:
         "orientation": np.asarray(dcm.ImageOrientationPatient, dtype=float),
         "series_uid": dcm.SeriesInstanceUID,
         "frame_uid": dcm.FrameOfReferenceUID,
-        "sop_uid": dcm.SOPInstanceUID
+        "sop_uid": dcm.SOPInstanceUID,
+        "countors": []
     } for dcm in info]
     return cts, plus_info
 
 
-def open_conture_dicom(filename: str) -> None:
+def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
     # Готовим путь и  читаем
     dir = "datasets"
     centre = "Center2"
@@ -49,13 +50,26 @@ def open_conture_dicom(filename: str) -> None:
     patient = "Patient01"
     full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
     data = pydicom.dcmread(full_path, force=True)
+    series_uid = data.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]
+    series_uid = series_uid.RTReferencedSeriesSequence[0].SeriesInstanceUID
+    if ct_info[0]["series_uid"] != str(series_uid):
+        print("Wrong UID")
+        return
     
     # Подготовка словаря: Номер ROI -> Информация о ROI 
     roi_struct = {int(el.ROINumber): {"name": str(el.ROIName)} for el in data.StructureSetROISequence}
     roi = data.ROIContourSequence
-    for el in roi:
-        roi_struct[int(el.ReferencedROINumber)]["color"] = list(el.ROIDisplayColor)
+    for info in ct_info:
+        sop_uid = info["sop_uid"]
+        for el in roi:
+            roi_struct[int(el.ReferencedROINumber)]["color"] = list(el.ROIDisplayColor)
+            info["countors"].append({int(el.ReferencedROINumber) : roi_struct[int(el.ReferencedROINumber)].copy()})
+            info["countors"][-1]["arrays"] = []
+            for seq in el.ContourSequence:
+                if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
+                     info["countors"][-1]["arrays"].append(np.array(seq.ContourData))
     
-#cts, info = prepeare_CT_images("Patient01", "Center2")
+cts, info = prepeare_CT_images("Patient01", "Center2")
 #print(info[10]["sop_uid"])
-open_conture_dicom("RS.dcm")
+open_conture_dicom("RS.dcm", info)
+pprint.pprint(info[0])
