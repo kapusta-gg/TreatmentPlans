@@ -1,4 +1,6 @@
 datasets
 dicom_ct.txt
+dicom_rp.txt
+dicom_rd.txt
 test.txt
 .venv

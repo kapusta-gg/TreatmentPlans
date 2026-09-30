@@ -5,15 +5,8 @@ import pydicom
 import matplotlib.pyplot as plt
 import numpy as np
 
-dir = "datasets"
-centre = "Center1"
-dcm_files = "CT images"
-patient = "Patient01"
-filename = "CT_15_01_1501023_DEIDENT_1894254.dcm"
-full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
 
-
-def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, list]:
+def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
     # готовим путь и читаем
     dir = "datasets"
     dcm_files = "CT images"
@@ -65,11 +58,22 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
             roi_struct[int(el.ReferencedROINumber)]["color"] = list(el.ROIDisplayColor)
             info["countors"].append({int(el.ReferencedROINumber) : roi_struct[int(el.ReferencedROINumber)].copy()})
             info["countors"][-1]["arrays"] = []
+            info["countors"][-1]["types"] = []
             for seq in el.ContourSequence:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
                      info["countors"][-1]["arrays"].append(np.array(seq.ContourData))
+                     info["countors"][-1]["types"].append(str(seq.ContourGeometricType))
     
 cts, info = prepeare_CT_images("Patient01", "Center2")
-#print(info[10]["sop_uid"])
 open_conture_dicom("RS.dcm", info)
 pprint.pprint(info[0])
+
+dir = "datasets"
+centre = "Center2"
+dcm_files = "Treatment plans"
+patient = "Patient01"
+filename = "RD.dcm"
+full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
+with open("dicom_rd.txt", mode="w") as f:
+    data = pydicom.dcmread(full_path)
+    f.write(str(data))
