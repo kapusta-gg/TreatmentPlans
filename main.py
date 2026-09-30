@@ -30,7 +30,8 @@ def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
         "series_uid": dcm.SeriesInstanceUID,
         "frame_uid": dcm.FrameOfReferenceUID,
         "sop_uid": dcm.SOPInstanceUID,
-        "countors": []
+        "countors": [],
+        "patient pos": dcm.ImagePositionPatient
     } for dcm in info]
     return cts, plus_info
 
@@ -65,15 +66,17 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
                      info["countors"][-1]["types"].append(str(seq.ContourGeometricType))
     
 cts, info = prepeare_CT_images("Patient01", "Center2")
-open_conture_dicom("RS.dcm", info)
-pprint.pprint(info[0])
+#open_conture_dicom("RS.dcm", info)
 
-dir = "datasets"
-centre = "Center2"
-dcm_files = "Treatment plans"
-patient = "Patient01"
-filename = "RD.dcm"
-full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
-with open("dicom_rd.txt", mode="w") as f:
-    data = pydicom.dcmread(full_path)
-    f.write(str(data))
+plt.imshow(cts[100])
+plt.show()
+
+# dir = "datasets"
+# centre = "Center2"
+# dcm_files = "Treatment plans"
+# patient = "Patient01"
+# filename = "RD.dcm"
+# full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
+# with open("dicom_rd.txt", mode="w") as f:
+#     data = pydicom.dcmread(full_path)
+#     f.write(str(data))
