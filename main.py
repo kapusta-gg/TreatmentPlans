@@ -31,7 +31,7 @@ def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
         "frame_uid": dcm.FrameOfReferenceUID,
         "sop_uid": dcm.SOPInstanceUID,
         "countors": [],
-        "patient pos": dcm.ImagePositionPatient
+        "patient_pos": dcm.ImagePositionPatient
     } for dcm in info]
     return cts, plus_info
 
@@ -58,18 +58,44 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
         for el in roi:
             roi_struct[int(el.ReferencedROINumber)]["color"] = list(el.ROIDisplayColor)
             info["countors"].append({int(el.ReferencedROINumber) : roi_struct[int(el.ReferencedROINumber)].copy()})
-            info["countors"][-1]["arrays"] = []
-            info["countors"][-1]["types"] = []
+            info["countors"][-1][int(el.ReferencedROINumber)]["arrays"] = []
+            info["countors"][-1][int(el.ReferencedROINumber)]["types"] = []
             for seq in el.ContourSequence:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
-                     info["countors"][-1]["arrays"].append(np.array(seq.ContourData))
-                     info["countors"][-1]["types"].append(str(seq.ContourGeometricType))
+                     info["countors"][-1][int(el.ReferencedROINumber)]["arrays"].append(np.array(seq.ContourData))
+                     info["countors"][-1][int(el.ReferencedROINumber)]["types"].append(str(seq.ContourGeometricType))
     
 cts, info = prepeare_CT_images("Patient01", "Center2")
-#open_conture_dicom("RS.dcm", info)
+open_conture_dicom("RS.dcm", info)
 
-plt.imshow(cts[100])
-plt.show()
+# pprint.pprint(info[0]["countors"])
+# data = info[0]["countors"][0][1]["arrays"][0].reshape(-1, 3)
+# data = (data - info[0]["patient_pos"])[:, :2] 
+# data = (data / info[0]["pixel_spacing"]).astype(np.int64)
+# color = np.mean([int(i) for i in info[0]["countors"][0][1]["color"]])
+
+def show_countor(ct_scan, info):
+    ct = ct_scan.copy()
+    for ind, i in enumerate(info["countors"]):
+        temp = i[ind + 1]
+
+        for data in temp["arrays"]:
+            data = data.reshape(-1, 3)
+            data = (data - info["patient_pos"])[:, :2] 
+            data = (data / info["pixel_spacing"]).astype(np.int64)
+            #color = np.mean([int(i) for i in temp["color"]])
+            for x, y in data:
+                if "PTV" in temp["name"]:
+                    print(temp["name"])
+                    color = -1000
+                else:
+                    color = 1400
+                ct[y, x] = color
+
+    plt.imshow(ct, cmap="gray", vmin=-200, vmax=300)
+    plt.show()
+
+show_countor(cts[200], info[200])
 
 # dir = "datasets"
 # centre = "Center2"
