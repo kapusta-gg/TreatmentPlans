@@ -4,6 +4,7 @@ import pprint
 import pydicom
 import matplotlib.pyplot as plt
 import numpy as np
+from skimage.draw import polygon
 
 
 def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
@@ -74,19 +75,24 @@ open_conture_dicom("RS.dcm", info)
 # data = (data / info[0]["pixel_spacing"]).astype(np.int64)
 # color = np.mean([int(i) for i in info[0]["countors"][0][1]["color"]])
 
-def show_countor(ct_scan, info):
+#TODO: Переписать функцию на сохранение масок по всем сканам пациента
+def show_countor(ct_scan, info, num=0):
     ct = ct_scan.copy()
     for ind, i in enumerate(info["countors"]):
-        temp = i[ind + 1]
+        ind +=1 
+        mask = np.zeros(ct_scan.shape, dtype=bool)
+        temp = i[ind]
 
         for data in temp["arrays"]:
             data = data.reshape(-1, 3)
             data = (data - info["patient_pos"])[:, :2] 
-            data = (data / info["pixel_spacing"]).astype(np.int64)
+            data = (data / info["pixel_spacing"])
             #color = np.mean([int(i) for i in temp["color"]])
-            for x, y in data:
+            for x, y in data.astype(np.int64):
                 if "PTV" in temp["name"]:
-                    print(temp["name"])
+                    rr, cc = polygon(data[:, 1], data[:, 0], shape=mask.shape)
+                    mask[rr, cc] = True
+                    plt.imsave(f"masks/mask{num}.png", mask, cmap="gray", vmin=0, vmax=1)
                     color = -1000
                 else:
                     color = 1400
@@ -95,7 +101,7 @@ def show_countor(ct_scan, info):
     plt.imshow(ct, cmap="gray", vmin=-200, vmax=300)
     plt.show()
 
-show_countor(cts[200], info[200])
+show_countor(cts[200], info[200], num=200)
 
 # dir = "datasets"
 # centre = "Center2"
