@@ -65,43 +65,45 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
                      info["countors"][-1][int(el.ReferencedROINumber)]["arrays"].append(np.array(seq.ContourData))
                      info["countors"][-1][int(el.ReferencedROINumber)]["types"].append(str(seq.ContourGeometricType))
-    
+
+#TODO: Переписать функцию на сохранение масок(любых) по всем сканам пациента
+def show_countor(cts_scan, info, num=0):
+    for j in range(num):
+        ct = cts_scan[j].copy()
+        for ind, i in enumerate(info[j]["countors"]):
+            ind +=1 
+            mask = np.zeros(cts_scan[j].shape, dtype=bool)
+            temp = i[ind]
+
+            for data in temp["arrays"]:
+                data = data.reshape(-1, 3)
+                data = (data - info[j]["patient_pos"])[:, :2] 
+                data = (data / info[j]["pixel_spacing"])
+                #color = np.mean([int(i) for i in temp["color"]])
+                for x, y in data.astype(np.int64):
+                    if "PTV" in temp["name"].upper():
+                        rr, cc = polygon(data[:, 1], data[:, 0], shape=mask.shape)
+                        mask[rr, cc] = True
+                        plt.imsave(f"masks/mask{j}_{ind}.png", mask, cmap="gray", vmin=0, vmax=1)
+                        color = -1000
+                    else:
+                        color = 1400
+                    ct[y, x] = color
+
+   # plt.imshow(ct, cmap="gray", vmin=-200, vmax=300)
+   # plt.show()
+
+
 cts, info = prepeare_CT_images("Patient01", "Center2")
 open_conture_dicom("RS.dcm", info)
 
-# pprint.pprint(info[0]["countors"])
+pprint.pprint(info[0])
 # data = info[0]["countors"][0][1]["arrays"][0].reshape(-1, 3)
 # data = (data - info[0]["patient_pos"])[:, :2] 
 # data = (data / info[0]["pixel_spacing"]).astype(np.int64)
 # color = np.mean([int(i) for i in info[0]["countors"][0][1]["color"]])
 
-#TODO: Переписать функцию на сохранение масок по всем сканам пациента
-def show_countor(ct_scan, info, num=0):
-    ct = ct_scan.copy()
-    for ind, i in enumerate(info["countors"]):
-        ind +=1 
-        mask = np.zeros(ct_scan.shape, dtype=bool)
-        temp = i[ind]
-
-        for data in temp["arrays"]:
-            data = data.reshape(-1, 3)
-            data = (data - info["patient_pos"])[:, :2] 
-            data = (data / info["pixel_spacing"])
-            #color = np.mean([int(i) for i in temp["color"]])
-            for x, y in data.astype(np.int64):
-                if "PTV" in temp["name"]:
-                    rr, cc = polygon(data[:, 1], data[:, 0], shape=mask.shape)
-                    mask[rr, cc] = True
-                    plt.imsave(f"masks/mask{num}.png", mask, cmap="gray", vmin=0, vmax=1)
-                    color = -1000
-                else:
-                    color = 1400
-                ct[y, x] = color
-
-    plt.imshow(ct, cmap="gray", vmin=-200, vmax=300)
-    plt.show()
-
-show_countor(cts[200], info[200], num=200)
+#show_countor(cts, info, num=len(cts))
 
 # dir = "datasets"
 # centre = "Center2"
