@@ -2,6 +2,7 @@ datasets
 dicom_ct.txt
 dicom_rp.txt
 dicom_rd.txt
+dicom_rs.txt
 test.txt
 .venv
 masks

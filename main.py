@@ -2,6 +2,7 @@ import json
 import os
 from time import perf_counter
 from pathlib import Path
+from collections import Counter
 
 import pydicom
 import matplotlib.pyplot as plt
@@ -19,6 +20,16 @@ def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
             for dcm in os.listdir(path)]
 
     info.sort(key=lambda x: x.ImagePositionPatient[-1])
+
+    # ДУБЛИКАТЫ В ТЕСТОВОМ ДАТАСЕТЕ!
+    unique = {}
+    for ds in info:
+        unique.setdefault(str(ds.SOPInstanceUID), ds)
+
+    info = sorted(
+        unique.values(),
+        key=lambda ds: float(ds.ImagePositionPatient[-1])
+    )
 
     # Собираем снимки
     cts = np.stack([dcm.pixel_array * dcm.RescaleSlope +
@@ -287,12 +298,12 @@ t = perf_counter()
 open_conture_dicom("RS.dcm", info)
 print("Чтение контуров:", perf_counter() - t)
 
-# t = perf_counter()
-# masks = collect_masks(cts, info)
+t = perf_counter()
+masks = collect_masks(cts, info)
+print("Чтение маск:", perf_counter() - t)
 
-compare_mask_methods(cts, info, roi_number=2)  # PTV
-compare_mask_methods(cts, info, roi_number=1)   # Rectum
-
+print(cts.shape)
+print(masks.shape)
 # dir = "datasets"
 # centre = "Center2"
 # dcm_files = "Treatment plans"
