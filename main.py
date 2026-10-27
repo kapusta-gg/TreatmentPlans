@@ -36,7 +36,6 @@ def prepeare_CT_images(patient_dir: str, center: str) -> tuple[np.array, dict]:
 
 
 def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
-    # Готовим путь и  читаем
     dir = "datasets"
     centre = "Center2"
     dcm_files = "Treatment plans"
@@ -63,17 +62,32 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
                      info["countors"][-1]["arrays"].append(np.array(seq.ContourData))
                      info["countors"][-1]["types"].append(str(seq.ContourGeometricType))
-    
-cts, info = prepeare_CT_images("Patient01", "Center2")
-open_conture_dicom("RS.dcm", info)
-pprint.pprint(info[0])
 
-dir = "datasets"
-centre = "Center2"
-dcm_files = "Treatment plans"
-patient = "Patient01"
-filename = "RD.dcm"
-full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
-with open("dicom_rd.txt", mode="w") as f:
-    data = pydicom.dcmread(full_path)
-    f.write(str(data))
+
+def open_plan_dicom(filename: str, ct_info: dict[str: any]) -> None:
+    dir = "datasets"
+    centre = "Center2"
+    dcm_files = "Treatment plans"
+    patient = "Patient01"
+    full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
+    dcm = pydicom.dcmread(full_path, force=True)
+
+    info = {"sop": dcm.SOPInstanceUID,
+            "frame_reference": dcm.FrameOfReferenceUID,
+            "structure_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
+            "dose_reference": {}}
+
+    for dose_seq in list(dcm.DoseReferenceSequence):
+        info["dose_reference"][dose_seq.DoseReferenceNumber] = {}
+        temp = info["dose_reference"][dose_seq.DoseReferenceNumber]
+        temp["dose_struct_type"] = str(dose_seq.DoseReferenceStructureType)
+        temp["dose_type"] = str(dose_seq.DoseReferenceType)
+        if temp["dose_type"] == "TARGET":
+            temp["delivary_max_dose"] = dose_seq.DeliveryMaximumDose 
+            temp["target_max_dose"] = dose_seq.TargetMaximumDose
+        elif temp["dose_type"] == "COORDINATES":
+            temp["point_coords"] = dose_seq.DoseReferencePointCoordinates
+
+cts, info = prepeare_CT_images("Patient01", "Center2")
+
+open_plan_dicom("RP.dcm", info)
