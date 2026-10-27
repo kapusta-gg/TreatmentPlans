@@ -76,7 +76,6 @@ def open_dose_dicom(filename: str, ct_info: dict[str: any]) -> None:
     centre = "Center2"
     dcm_files = "Treatment plans"
     patient = "Patient01"
-    filename = "RD.dcm"
     full_path = "/".join([".", dir, centre, dcm_files, patient, filename])
     dcm = pydicom.dcmread(full_path, force=True)
 
@@ -86,7 +85,6 @@ def open_dose_dicom(filename: str, ct_info: dict[str: any]) -> None:
             "pixel_spacing": list(dcm.PixelSpacing),
             "patient_pos": list(dcm.ImagePositionPatient),
             "orientation": list(dcm.ImageOrientationPatient),
-            "pixel_spacing": list(dcm.PixelSpacing),
             "offset": list(dcm.GridFrameOffsetVector),
             "frame_uid": dcm.FrameOfReferenceUID,
             "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
@@ -102,12 +100,13 @@ def open_dose_dicom(filename: str, ct_info: dict[str: any]) -> None:
         info["DVH"][seq.ReferencedROINumber]["units"] = dvh_seq.DoseUnits
         info["DVH"][seq.ReferencedROINumber]["type"] = dvh_seq.DoseType
         info["DVH"][seq.ReferencedROINumber]["scaling"] = dvh_seq.DVHDoseScaling
-        info["DVH"][seq.ReferencedROINumber]["units"] = dvh_seq.DVHVolumeUnits
+        info["DVH"][seq.ReferencedROINumber]["volume_units"] = dvh_seq.DVHVolumeUnits
         info["DVH"][seq.ReferencedROINumber]["bins"] = dvh_seq.DVHNumberOfBins
         info["DVH"][seq.ReferencedROINumber]["data"] = list(dvh_seq.DVHData)
         info["DVH"][seq.ReferencedROINumber]["min_dose"] = float(dvh_seq.DVHMinimumDose)
         info["DVH"][seq.ReferencedROINumber]["max_dose"] = float(dvh_seq.DVHMaximumDose)
 
+    return pixel_array, info
 
 cts, info = prepeare_CT_images("Patient01", "Center2")
 # open_conture_dicom("RS.dcm", info)
