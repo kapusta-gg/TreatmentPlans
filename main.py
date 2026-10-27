@@ -93,7 +93,7 @@ def open_dose_dicom(filename: str, ct_info: dict[str: any]) -> None:
             "struct_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
             "DVH": {}}
 
-    pixel_array = dcm.pixel_array
+    pixel_array = dcm.pixel_array * float(dcm.DoseGridScaling)
 
     for dvh_seq in dcm.DVHSequence:
         seq = dvh_seq.DVHReferencedROISequence[0]
@@ -105,9 +105,8 @@ def open_dose_dicom(filename: str, ct_info: dict[str: any]) -> None:
         info["DVH"][seq.ReferencedROINumber]["units"] = dvh_seq.DVHVolumeUnits
         info["DVH"][seq.ReferencedROINumber]["bins"] = dvh_seq.DVHNumberOfBins
         info["DVH"][seq.ReferencedROINumber]["data"] = list(dvh_seq.DVHData)
-
-    with open('rd.json', "w") as f:
-        json.dump(info, f, indent=2)
+        info["DVH"][seq.ReferencedROINumber]["min_dose"] = float(dvh_seq.DVHMinimumDose)
+        info["DVH"][seq.ReferencedROINumber]["max_dose"] = float(dvh_seq.DVHMaximumDose)
 
 
 cts, info = prepeare_CT_images("Patient01", "Center2")
