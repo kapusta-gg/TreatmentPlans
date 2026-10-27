@@ -83,11 +83,19 @@ def open_plan_dicom(filename: str, ct_info: dict[str: any]) -> None:
         temp["dose_struct_type"] = str(dose_seq.DoseReferenceStructureType)
         temp["dose_type"] = str(dose_seq.DoseReferenceType)
         if temp["dose_type"] == "TARGET":
-            temp["delivary_max_dose"] = dose_seq.DeliveryMaximumDose 
-            temp["target_max_dose"] = dose_seq.TargetMaximumDose
-        elif temp["dose_type"] == "COORDINATES":
-            temp["point_coords"] = dose_seq.DoseReferencePointCoordinates
+            for key, tag in {
+                "delivery_max_dose": "DeliveryMaximumDose",
+                "target_prescription_dose": "TargetPrescriptionDose",
+                "target_max_dose": "TargetMaximumDose",
+            }.items():
+                value = getattr(dose_seq, tag, None)
+                temp[key] = float(value) if value is not None else None
 
+        if temp["dose_struct_type"] == "COORDINATES":
+            temp["point_coords"] = [
+                float(x) for x in dose_seq.DoseReferencePointCoordinates
+            ]
+            
 cts, info = prepeare_CT_images("Patient01", "Center2")
 
 open_plan_dicom("RP.dcm", info)
