@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 
 from parser import dose, counter, plan, scan
+from errors import *
 
 def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, plan_filename: str) -> None:
     args = [ct_dir, counters_filename, dose_filename, plan_filename]
@@ -11,6 +12,8 @@ def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, pl
     cts, info_ct = scan.prepeare_CT_images(ct_dir)
     counter.open_conture_dicom(counters_filename, info_ct)
 
+    if len(set(i["frame_uid"] for i in info_ct)) != 1:
+        raise ReferenceUIDError("CT not from one frame!")
     frame_uid = info_ct[0]["frame_uid"]
     
     dose_map, info_dose = dose.open_dose_dicom(dose_filename, expected_frame_uid=frame_uid)
