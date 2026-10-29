@@ -3,12 +3,15 @@ import json
 import numpy as np
 from pathlib import Path
 
+from checkers.check.filepath import check_filenames 
 from parser import dose, counter, plan, scan
 from errors import *
 
 def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, plan_filename: str) -> None:
     args = [ct_dir, counters_filename, dose_filename, plan_filename]
-    
+
+    check_filenames(*args)
+
     cts, info_ct = scan.prepeare_CT_images(ct_dir)
     counter.open_conture_dicom(counters_filename, info_ct)
 
