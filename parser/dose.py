@@ -1,8 +1,10 @@
 import pydicom
 import numpy as np
 
+from errors import *
 
-def open_dose_dicom(filename: str) -> tuple[np.array, dict]:
+
+def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, dict]:
     dcm = pydicom.dcmread(filename, force=True)
 
     info = {"dose": {"units": dcm.DoseUnits,
@@ -16,6 +18,10 @@ def open_dose_dicom(filename: str) -> tuple[np.array, dict]:
             "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
             "struct_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
             "DVH": {}}
+
+    if expected_frame_uid is not None:
+        if expected_frame_uid != info["frame_reference"]:
+            raise ReferenceUIDError("Wrong UID!")
 
     pixel_array = dcm.pixel_array * float(dcm.DoseGridScaling)
 

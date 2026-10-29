@@ -1,8 +1,11 @@
 import pydicom
 
+from errors import *
 
-def open_plan_dicom(filename: str) -> dict:
+
+def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
     dcm = pydicom.dcmread(filename, force=True)
+
 
     info = {"sop": dcm.SOPInstanceUID,
             "frame_reference": dcm.FrameOfReferenceUID,
@@ -10,6 +13,10 @@ def open_plan_dicom(filename: str) -> dict:
             "dose_reference": {},
             "fraction_group": {},
             "beam_sequence": {}}
+
+    if expected_frame_uid is not None:
+        if expected_frame_uid != info["frame_reference"]:
+            raise ReferenceUIDError("Wrong UID!")
 
     for dose_seq in dcm.DoseReferenceSequence:
         info["dose_reference"][dose_seq.DoseReferenceNumber] = {}
