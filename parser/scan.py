@@ -3,7 +3,7 @@ import pydicom
 import numpy as np
 
 
-def prepeare_CT_images(patient_dir: str) -> tuple[np.array, dict]:
+def prepeare_CT_images(patient_dir: str) -> tuple[np.array, list]:
     # Получаем путь до файла и читаем
     info = [pydicom.dcmread(os.path.join(*(patient_dir, dcm)))
             for dcm in os.listdir(patient_dir)]

@@ -8,14 +8,14 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
 
 
     info = {"sop": dcm.SOPInstanceUID,
-            "frame_reference": dcm.FrameOfReferenceUID,
+            "frame_uid": str(dcm.FrameOfReferenceUID),
             "structure_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
             "dose_reference": {},
             "fraction_group": {},
             "beam_sequence": {}}
 
     if expected_frame_uid is not None:
-        if expected_frame_uid != info["frame_reference"]:
+        if expected_frame_uid != info["frame_uid"]:
             raise ReferenceUIDError("Wrong UID!")
 
     for dose_seq in dcm.DoseReferenceSequence:

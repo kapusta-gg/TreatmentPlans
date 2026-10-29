@@ -10,8 +10,11 @@ def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, pl
     
     cts, info_ct = scan.prepeare_CT_images(ct_dir)
     counter.open_conture_dicom(counters_filename, info_ct)
-    dose_map, info_dose = dose.open_dose_dicom(dose_filename)
-    info_plan = plan.open_plan_dicom(plan_filename)
+
+    frame_uid = info_ct[0]["frame_uid"]
+    
+    dose_map, info_dose = dose.open_dose_dicom(dose_filename, expected_frame_uid=frame_uid)
+    info_plan = plan.open_plan_dicom(plan_filename, expected_frame_uid=frame_uid)
     print("Done!")
 
 

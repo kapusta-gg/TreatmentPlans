@@ -14,13 +14,13 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
             "patient_pos": list(dcm.ImagePositionPatient),
             "orientation": list(dcm.ImageOrientationPatient),
             "offset": list(dcm.GridFrameOffsetVector),
-            "frame_uid": dcm.FrameOfReferenceUID,
+            "frame_uid": str(dcm.FrameOfReferenceUID),
             "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
             "struct_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
             "DVH": {}}
 
     if expected_frame_uid is not None:
-        if expected_frame_uid != info["frame_reference"]:
+        if expected_frame_uid != info["frame_uid"]:
             raise ReferenceUIDError("Wrong UID!")
 
     pixel_array = dcm.pixel_array * float(dcm.DoseGridScaling)
