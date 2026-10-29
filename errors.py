@@ -1,0 +1,2 @@
+class SeriesUIDError(Exception):
+    pass
