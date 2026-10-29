@@ -127,7 +127,7 @@ def open_plan_dicom(filename: str, ct_info: dict[str: any]) -> None:
 
         temp["control_points"] = {}
         temp = temp["control_points"]
-        # TODO: Add ReferencedDoseReferenceSequence
+        
         for cp in beam_seq.ControlPointSequence:
             temp[str(cp.ControlPointIndex)] = {}
             cp_temp = temp[str(cp.ControlPointIndex)]
@@ -142,6 +142,10 @@ def open_plan_dicom(filename: str, ct_info: dict[str: any]) -> None:
             
             if cp.get("IsocenterPosition") is not None:
                 cp_temp["isocenter_pos"] = [float(x) for x in cp.get("IsocenterPosition")]
+
+            dose_ref = cp.get("ReferencedDoseReferenceSequence")
+            if dose_ref is not None:
+                cp_temp["dose_ref"] = [i.ReferencedDoseReferenceNumber for i in dose_ref]
 
             for i in ["gantry", "patient_sup", "table"]:
                 cp_temp[i] = {}
@@ -170,7 +174,5 @@ def open_plan_dicom(filename: str, ct_info: dict[str: any]) -> None:
 
 cts, info = prepeare_CT_images("Patient01", "Center2")
 
-with open("test.json", "w", encoding="UTF-8") as f:
-    data = open_plan_dicom("RP.dcm", info)
-    pprint.pprint(data)
-    #json.dump(, f)
+data = open_plan_dicom("RP.dcm", info)
+pprint.pprint(data)
