@@ -1,3 +1,5 @@
+__pycache__/
+*.pyc
 datasets
 dicom_ct.txt
 dicom_rp.txt
