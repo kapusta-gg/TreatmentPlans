@@ -6,4 +6,4 @@ def check_filenames(*filenames):
             raise FileExistsError("No File!")
         if os.path.isfile(filename):
             if not filename.endswith("dcm"):
-                raise FileNotFoundError("File is not DICOM")
+                raise FileNotFoundError("File is not DICOM!")

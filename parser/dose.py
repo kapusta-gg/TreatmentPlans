@@ -1,5 +1,6 @@
 import pydicom
 import numpy as np
+from scipy.ndimage import map_coordinates
 
 from errors import *
 
@@ -11,9 +12,9 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
                      "type": dcm.DoseType,
                      "sum_type": dcm.DoseSummationType},
             "pixel_spacing": list(dcm.PixelSpacing),
-            "patient_pos": list(dcm.ImagePositionPatient),
+            "patient_pos": np.asarray(dcm.ImagePositionPatient, dtype=float),
             "orientation": list(dcm.ImageOrientationPatient),
-            "offset": list(dcm.GridFrameOffsetVector),
+            "offset":  np.asarray(dcm.GridFrameOffsetVector, dtype=float), 
             "frame_uid": str(dcm.FrameOfReferenceUID),
             "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
             "struct_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
@@ -39,3 +40,46 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
         info["DVH"][seq.ReferencedROINumber]["max_dose"] = float(dvh_seq.DVHMaximumDose)
 
     return pixel_array, info
+
+
+def resize(cts, info_ct, dose_map, info_dose):
+    if len(cts) != len(dose_map):
+        raise ValueError("Число срезов КТ и дозы не совпадает")
+
+    dose_on_ct = np.zeros(cts.shape, dtype=np.float32)
+    valid_mask = np.zeros(cts.shape, dtype=bool)
+
+    dose_rows, dose_cols = dose_map.shape[1:]
+    dose_pos = info_dose["patient_pos"]
+    dose_spacing = info_dose["pixel_spacing"]
+
+    rows, cols = np.indices(cts.shape[1:], dtype=float)
+
+    for k, info in enumerate(info_ct):
+        ct_pos = info["patient_pos"]
+        ct_spacing = info["pixel_spacing"]
+
+        x = ct_pos[0] + cols * ct_spacing[1]
+        y = ct_pos[1] + rows * ct_spacing[0]
+
+        dose_col = (x - dose_pos[0]) / dose_spacing[1]
+        dose_row = (y - dose_pos[1]) / dose_spacing[0]
+
+        valid = (
+            (dose_row >= 0) & (dose_row <= dose_rows - 1)
+            & (dose_col >= 0) & (dose_col <= dose_cols - 1)
+        )
+        valid_mask[k] = valid
+
+        map_coordinates(
+            np.asarray(dose_map[k], dtype=np.float32),
+            [dose_row, dose_col],
+            output=dose_on_ct[k],
+            order=1,
+            mode="constant",
+            cval=0.0,
+            prefilter=False,
+        )
+        dose_on_ct[k][~valid] = 0
+
+    return dose_on_ct, valid_mask
