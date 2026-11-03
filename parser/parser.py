@@ -1,43 +1,64 @@
 import json
-from time import perf_counter
 
 import numpy as np
 from pathlib import Path
 
 from checkers.check.filepath import check_filenames
-from checkers.compare.dose import show_dose_check 
 from parser import dose, counter, plan, scan
 from errors import *
 
-def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, plan_filename: str) -> None:
-    t = perf_counter()
+def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, plan_filename: str) -> tuple[np.array, np.array, np.array, dict]:
     info = {}
     args = [ct_dir, counters_filename, dose_filename, plan_filename]
 
     check_filenames(*args)
 
     cts, info_ct = scan.prepeare_CT_images(ct_dir)
+
+    info["ct"] = {
+        "frame_uid": str(info_ct[0]["frame_uid"]),
+        "series_uid": str(info_ct[0]["series_uid"]),
+        "positions": [
+            [float(v) for v in slice_info["patient_pos"]]
+            for slice_info in info_ct
+        ],
+    }
+    
     counter.open_conture_dicom(counters_filename, info_ct)
+    info["roi_channels"] = {}
+
+    for channel, contour in enumerate(info_ct[0]["countors"]):
+        roi_number = next(
+            key for key in contour
+            if isinstance(key, int)
+        )
+
+        if roi_number != channel + 1:
+            raise ValueError(
+                f"Канал {channel}: ожидался ROI {channel + 1}, "
+                f"найден ROI {roi_number}"
+            )
+
+        info["roi_channels"][str(channel)] = {
+            "roi_number": roi_number,
+            "name": str(contour[roi_number]["name"]),
+        }
+
     masks = counter.collect_masks(cts, info_ct)
-    info["ct"] = info
 
     if len(set(i["frame_uid"] for i in info_ct)) != 1:
         raise ReferenceUIDError("CT not from one frame!")
     frame_uid = info_ct[0]["frame_uid"]
     
     dose_map, info_dose = dose.open_dose_dicom(dose_filename, expected_frame_uid=frame_uid)
-    print("До маски:", perf_counter() - t)
-    t = perf_counter()
     dose_on_ct, valid_mask = dose.resize(cts, info_ct, dose_map, info_dose)
-    print("После маски:", perf_counter() - t)
 
     info_plan = plan.open_plan_dicom(plan_filename, expected_frame_uid=frame_uid)
+
     info["dose"] = info_dose
     info["plan"] = info_plan
 
-
-    show_dose_check(cts, masks, dose_on_ct, valid_mask, k=114, roi_channel=14)
-    #return ..., info
+    return cts, masks, dose_on_ct, info
 
 
 # TODO: переписать под общий массив
