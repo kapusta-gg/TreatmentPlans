@@ -6,7 +6,6 @@ from errors import *
 def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
     dcm = pydicom.dcmread(filename, force=True)
 
-
     info = {"sop": dcm.SOPInstanceUID,
             "frame_uid": str(dcm.FrameOfReferenceUID),
             "structure_uid": dcm.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID,
@@ -41,7 +40,7 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
         info["fraction_group"][str(frac_gr.FractionGroupNumber)] = {}
         temp = info["fraction_group"][str(frac_gr.FractionGroupNumber)]
         temp["num_fracts"] = frac_gr.NumberOfFractionsPlanned
-        temp["num_beans"] = frac_gr.NumberOfBeams 
+        temp["num_beans"] = frac_gr.NumberOfBeams
         temp["beams"] = {}
         for ref in frac_gr.get("ReferencedBeamSequence", []):
             beam_num = str(ref.ReferencedBeamNumber)
@@ -61,11 +60,12 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
         temp["delivary_type"] = beam_seq.TreatmentDeliveryType
         temp["beam_num"] = beam_seq.BeamNumber
 
-        temp["reg_imgs"] = [str(i.ReferencedSOPInstanceUID) for i in beam_seq.ReferencedReferenceImageSequence]
+        temp["reg_imgs"] = [str(i.ReferencedSOPInstanceUID) for i in beam_seq.get(
+            "ReferencedReferenceImageSequence", [])]
 
         temp["control_points"] = {}
         temp = temp["control_points"]
-        
+
         for cp in beam_seq.ControlPointSequence:
             temp[str(cp.ControlPointIndex)] = {}
             cp_temp = temp[str(cp.ControlPointIndex)]
@@ -77,13 +77,15 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
                 ]
 
             cp_temp["meterset_weight"] = cp.CumulativeMetersetWeight
-            
+
             if cp.get("IsocenterPosition") is not None:
-                cp_temp["isocenter_pos"] = [float(x) for x in cp.get("IsocenterPosition")]
+                cp_temp["isocenter_pos"] = [
+                    float(x) for x in cp.get("IsocenterPosition")]
 
             dose_ref = cp.get("ReferencedDoseReferenceSequence")
             if dose_ref is not None:
-                cp_temp["dose_ref"] = [i.ReferencedDoseReferenceNumber for i in dose_ref]
+                cp_temp["dose_ref"] = [
+                    i.ReferencedDoseReferenceNumber for i in dose_ref]
 
             for i in ["gantry", "patient_sup", "table"]:
                 cp_temp[i] = {}
@@ -93,19 +95,27 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
                         if j == "top":
                             for k in ["eccentric", "vertical", "longitudinal", "lateral", "pitch"]:
                                 cp_temp[i][j][k] = {}
-            
+
             cp_temp["gantry"]["angle"] = cp.get("GantryAngle")
-            cp_temp["gantry"]["direction"] = cp.get("GantryRotationDirection")            
-            
-            cp_temp["patient_sup"]["angle"] = cp.get("PatientSupportAngle")           
-            cp_temp["patient_sup"]["direction"] = cp.get("PatientSupportRotationDirection")
+            cp_temp["gantry"]["direction"] = cp.get("GantryRotationDirection")
 
-            cp_temp["table"]["top"]["eccentric"]["angle"] = cp.get("TableTopEccentricAngle")
-            cp_temp["table"]["top"]["vertical"]["pos"] = cp.get("TableTopVerticalPosition")
-            cp_temp["table"]["top"]["longitudinal"]["pos"] = cp.get("TableTopLongitudinalPosition")
-            cp_temp["table"]["top"]["lateral"]["pos"] = cp.get("TableTopLateralPosition")
-            cp_temp["table"]["top"]["pitch"]["angle"] = cp.get("TableTopPitchAngle")
+            cp_temp["patient_sup"]["angle"] = cp.get("PatientSupportAngle")
+            cp_temp["patient_sup"]["direction"] = cp.get(
+                "PatientSupportRotationDirection")
 
-            cp_temp["table"]["top"]["eccentric"]["direction"] = cp.get("TableTopEccentricRotationDirection")
-            cp_temp["table"]["top"]["pitch"]["direction"] = cp.get("TableTopPitchRotationDirection")
+            cp_temp["table"]["top"]["eccentric"]["angle"] = cp.get(
+                "TableTopEccentricAngle")
+            cp_temp["table"]["top"]["vertical"]["pos"] = cp.get(
+                "TableTopVerticalPosition")
+            cp_temp["table"]["top"]["longitudinal"]["pos"] = cp.get(
+                "TableTopLongitudinalPosition")
+            cp_temp["table"]["top"]["lateral"]["pos"] = cp.get(
+                "TableTopLateralPosition")
+            cp_temp["table"]["top"]["pitch"]["angle"] = cp.get(
+                "TableTopPitchAngle")
+
+            cp_temp["table"]["top"]["eccentric"]["direction"] = cp.get(
+                "TableTopEccentricRotationDirection")
+            cp_temp["table"]["top"]["pitch"]["direction"] = cp.get(
+                "TableTopPitchRotationDirection")
     return info
