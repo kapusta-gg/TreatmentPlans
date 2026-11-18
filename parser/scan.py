@@ -22,7 +22,7 @@ def prepeare_CT_images(patient_dir: str) -> tuple[np.array, list]:
 
     # Собираем снимки
     cts = np.stack([dcm.pixel_array * dcm.RescaleSlope +
-                    dcm.RescaleIntercept for dcm in info], axis=0)
+                    dcm.RescaleIntercept for dcm in info], axis=0, dtype=np.float32)
     # Собираем информацию по снимку
     plus_info = [{
         "slice_thickness": float(dcm.SliceThickness),
