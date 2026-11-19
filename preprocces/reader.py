@@ -230,3 +230,104 @@ def extract_dmean(npz_path, info_path):
         for name in selected
     }
 
+
+def extract_plan_rows(info_path: Path):
+    with info_path.open(encoding="utf-8") as file:
+        info = json.load(file)
+
+    patient = info_path.parent.name
+    plan = info["plan"]
+    beams = plan.get("beam_sequence", {})
+    fraction_groups = plan.get("fraction_group", {})
+
+    prescriptions = sorted({
+        float(ref["target_prescription_dose"])
+        for ref in plan.get("dose_reference", {}).values()
+        if ref.get("dose_type") == "TARGET"
+        and ref.get("target_prescription_dose") is not None
+    })
+
+    patient_row = {
+        "patient": patient,
+        "prescriptions_gy": json.dumps(prescriptions),
+        "fractions_by_group": json.dumps({
+            str(number): group.get("num_fracts")
+            for number, group in fraction_groups.items()
+        }),
+        "n_beams_total": len(beams),
+        "n_beams_treatment": sum(
+            beam.get("delivary_type") == "TREATMENT"
+            for beam in beams.values()
+        ),
+        "n_beams_setup": sum(
+            beam.get("delivary_type") == "SETUP"
+            for beam in beams.values()
+        ),
+    }
+
+    beam_rows = []
+
+    for beam_number, beam in beams.items():
+        control_points = [
+            cp
+            for _, cp in sorted(
+                beam.get("control_points", {}).items(),
+                key=lambda item: int(item[0]),
+            )
+        ]
+
+        angles = [
+            float(cp["gantry"]["angle"])
+            for cp in control_points
+            if cp.get("gantry", {}).get("angle") is not None
+        ]
+
+        direction = next(
+            (
+                cp["gantry"]["direction"]
+                for cp in control_points
+                if cp.get("gantry", {}).get("direction") is not None
+            ),
+            None,
+        )
+
+        isocenter = next(
+            (
+                cp["isocenter_pos"]
+                for cp in control_points
+                if cp.get("isocenter_pos") is not None
+            ),
+            [None, None, None],
+        )
+
+        # Привязка пучка к группам фракций.
+        references = {
+            str(group_number): group["beams"][str(beam_number)]
+            for group_number, group in fraction_groups.items()
+            if str(beam_number) in group.get("beams", {})
+        }
+
+        beam_rows.append({
+            "patient": patient,
+            "beam_number": beam_number,
+            "delivery_type": beam.get("delivary_type"),
+            "beam_type": beam.get("beam_type"),
+            "radiation_type": beam.get("rad_type"),
+            "n_control_points": len(control_points),
+            "gantry_start_deg": angles[0] if angles else None,
+            "gantry_end_deg": angles[-1] if angles else None,
+            "gantry_direction": direction,
+            "isocenter_x_mm": isocenter[0],
+            "isocenter_y_mm": isocenter[1],
+            "isocenter_z_mm": isocenter[2],
+            "beam_dose_by_group": json.dumps({
+                group: ref.get("dose")
+                for group, ref in references.items()
+            }),
+            "beam_meterset_by_group": json.dumps({
+                group: ref.get("meterset")
+                for group, ref in references.items()
+            }),
+        })
+
+    return patient_row, beam_rows
