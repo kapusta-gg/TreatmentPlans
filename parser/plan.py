@@ -64,10 +64,27 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
         temp["reg_imgs"] = [str(i.ReferencedSOPInstanceUID) for i in beam_seq.ReferencedReferenceImageSequence]
 
         temp["control_points"] = {}
+
+        temp["beam_limiting_devices"] = {}
+
+        for device in beam_seq.get("BeamLimitingDeviceSequence", []):
+            boundaries = device.get("LeafPositionBoundaries")
+            temp["beam_limiting_devices"][str(device.RTBeamLimitingDeviceType)] = {
+                "number_of_pairs": int(device.NumberOfLeafJawPairs),
+                "leaf_boundaries_mm": (
+                    [float(x) for x in boundaries]
+                    if boundaries is not None else None
+                ),
+            }
+
+        unit = beam_seq.get("PrimaryDosimeterUnit")
+        temp["primary_dosimeter_unit"] = str(unit) if unit is not None else None
+
         temp = temp["control_points"]
         
         for cp in beam_seq.ControlPointSequence:
             temp[str(cp.ControlPointIndex)] = {}
+
             cp_temp = temp[str(cp.ControlPointIndex)]
             for pos_seq in getattr(
                 cp, "BeamLimitingDevicePositionSequence", []
