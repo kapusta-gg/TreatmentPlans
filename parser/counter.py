@@ -5,6 +5,7 @@ import cv2
 
 from errors import *
 
+
 def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
     data = pydicom.dcmread(filename, force=True)
     series_uid = data.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0]
@@ -25,7 +26,12 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
                 {int(el.ReferencedROINumber): roi_struct[int(el.ReferencedROINumber)].copy()})
             info["countors"][-1]["arrays"] = []
             info["countors"][-1]["types"] = []
-            for seq in el.ContourSequence:
+            if not el.get("ContourSequence"):
+                roi_number = int(el.ReferencedROINumber)
+                print(
+                    f"ROI {roi_number} ({roi_struct[roi_number]['name']}): контуров нет")
+            temp = el.get("ContourSequence", [])
+            for seq in temp:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
                     info["countors"][-1]["arrays"].append(
                         np.array(seq.ContourData))
@@ -33,7 +39,7 @@ def open_conture_dicom(filename: str, ct_info: dict[str: any]) -> None:
                         str(seq.ContourGeometricType))
             info["countors"][-1][int(el.ReferencedROINumber)]["arrays"] = []
             info["countors"][-1][int(el.ReferencedROINumber)]["types"] = []
-            for seq in el.ContourSequence:
+            for seq in temp:
                 if str(seq.ContourImageSequence[0].ReferencedSOPInstanceUID) == sop_uid:
                     info["countors"][-1][int(el.ReferencedROINumber)
                                          ]["arrays"].append(np.array(seq.ContourData))
@@ -95,10 +101,15 @@ def collect_masks(cts, info):
     masks = np.zeros((len(cts), n_roi, *cts.shape[1:]), dtype=bool)
 
     for j in range(len(cts)):
-        for roi_number, countor in enumerate(info[j]["countors"], start=1):
-            masks[j, roi_number - 1] = prepare_mask_cv(
+        for channel, countor in enumerate(info[j]["countors"]):
+            roi_number = next(
+                key for key in countor
+                if isinstance(key, int)
+            )
+            masks[j, channel] = prepare_mask_cv(
                 cts[j].shape, countor, info[j], roi_number
             )
+
         info[j]["masks"] = masks[j]
 
     return masks
