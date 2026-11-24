@@ -78,7 +78,13 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
             }
 
         unit = beam_seq.get("PrimaryDosimeterUnit")
-        temp["primary_dosimeter_unit"] = str(unit) if unit is not None else None
+        temp["primary_dosimeter_unit"] = str(
+            unit) if unit is not None else None
+
+        final_weight = beam_seq.get("FinalCumulativeMetersetWeight")
+        temp["final_cumulative_meterset_weight"] = (
+            float(final_weight) if final_weight is not None else None
+        )
 
         temp = temp["control_points"]
 
@@ -86,6 +92,15 @@ def open_plan_dicom(filename: str, expected_frame_uid=None) -> dict:
             temp[str(cp.ControlPointIndex)] = {}
 
             cp_temp = temp[str(cp.ControlPointIndex)]
+
+            for dicom_name, output_name in (
+                ("NominalBeamEnergy", "nominal_beam_energy"),
+                ("DoseRateSet", "dose_rate_set"),
+            ):
+                value = cp.get(dicom_name)
+                if value is not None:
+                    cp_temp[output_name] = float(value)
+
             for pos_seq in getattr(
                 cp, "BeamLimitingDevicePositionSequence", []
             ):
