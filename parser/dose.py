@@ -13,21 +13,27 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
         temp = temp[0].ReferencedSOPInstanceUID
     info = {"dose": {"units": dcm.DoseUnits,
                      "type": dcm.DoseType,
-                     "sum_type": dcm.DoseSummationType},
-            "pixel_spacing": list(dcm.PixelSpacing),
-            "patient_pos": np.asarray(dcm.ImagePositionPatient, dtype=float),
-            "orientation": list(dcm.ImageOrientationPatient),
-            "offset":  np.asarray(dcm.GridFrameOffsetVector, dtype=float),
-            "frame_uid": str(dcm.FrameOfReferenceUID),
-            "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
-            "struct_uid": temp,
-            "DVH": {}}
+                     "sum_type": dcm.DoseSummationType,
+                     "grid_scaling": float(dcm.DoseGridScaling)},
+            "sop_uid": str(dcm.SOPInstanceUID),
+            "patient_position": (
+                str(dcm.PatientPosition)
+                if dcm.get("PatientPosition") is not None else None
+    ),
+        "pixel_spacing": list(dcm.PixelSpacing),
+        "patient_pos": np.asarray(dcm.ImagePositionPatient, dtype=float),
+        "orientation": list(dcm.ImageOrientationPatient),
+        "offset":  np.asarray(dcm.GridFrameOffsetVector, dtype=float),
+        "frame_uid": str(dcm.FrameOfReferenceUID),
+        "plan_uid": dcm.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID,
+        "struct_uid": temp,
+        "DVH": {}}
 
     if expected_frame_uid is not None:
         if expected_frame_uid != info["frame_uid"]:
             raise ReferenceUIDError("Wrong UID!")
 
-    pixel_array = dcm.pixel_array * float(dcm.DoseGridScaling)
+    pixel_array = dcm.pixel_array * info["dose"]["grid_scaling"]
 
     for dvh_seq in dcm.get("DVHSequence", []):
         seq = dvh_seq.DVHReferencedROISequence[0]
@@ -35,6 +41,7 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
         info["DVH"][seq.ReferencedROINumber]["contribution_type"] = seq.DVHROIContributionType
         info["DVH"][seq.ReferencedROINumber]["units"] = dvh_seq.DoseUnits
         info["DVH"][seq.ReferencedROINumber]["type"] = dvh_seq.DoseType
+        info["DVH"][seq.ReferencedROINumber]["dvh_type"] = str(dvh_seq.DVHType)
         info["DVH"][seq.ReferencedROINumber]["scaling"] = dvh_seq.DVHDoseScaling
         info["DVH"][seq.ReferencedROINumber]["volume_units"] = dvh_seq.DVHVolumeUnits
         info["DVH"][seq.ReferencedROINumber]["bins"] = dvh_seq.DVHNumberOfBins
@@ -43,6 +50,10 @@ def open_dose_dicom(filename: str, expected_frame_uid=None) -> tuple[np.array, d
             dvh_seq.DVHMinimumDose)
         info["DVH"][seq.ReferencedROINumber]["max_dose"] = float(
             dvh_seq.DVHMaximumDose)
+        if dvh_seq.get("DVHMeanDose") is not None:
+            info["DVH"][seq.ReferencedROINumber]["mean_dose"] = float(
+                dvh_seq.DVHMeanDose
+            )
 
     return pixel_array, info
 

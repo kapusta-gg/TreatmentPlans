@@ -63,11 +63,11 @@ def prepare_all_data(ct_dir: str, counters_filename: str, dose_filename: str, pl
     info["dose"] = info_dose
     info["plan"] = info_plan
 
-    return cts, masks, dose_on_ct, info
+    return cts, masks, dose_on_ct, valid_mask, info
 
 
 def save_ct_and_masks(
-        cts: np.ndarray, masks: np.ndarray, dose_on_ct: np.ndarray, filename: str) -> None:
+        cts: np.ndarray, masks: np.ndarray, dose_on_ct: np.ndarray, valid_mask: np.ndarray, filename: str) -> None:
     if cts.ndim != 3:
         raise ValueError(f"Ожидалась форма КТ (Z, H, W), получено {cts.shape}")
 
@@ -89,7 +89,8 @@ def save_ct_and_masks(
         path,
         ct=cts,
         masks=masks,
-        dose=dose_on_ct
+        dose=dose_on_ct,
+        valid_mask=valid_mask
     )
 
 
